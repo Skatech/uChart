@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>uChart - Test</title>
+    <style>
+        html {
+            color-scheme: light dark;
+            font-family: "Segoe UI", -apple-system, Arial, Verdana, sans-serif;
+        }
+        body { 
+            display: flex;
+            flex-direction: column;
+            width: 400px;
+            max-width: min(32em, 96vw);
+            height: calc(100dvh - 0.55em);
+            margin: 0 auto;
+            padding: 0;
+        }
+        canvas {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            margin: auto 0;
+            image-rendering: pixelated;
+            background-color: Field;
+            /* height: 600px; */
+        }
+    </style>
+    <script src="uchart.js"></script>
+</head>
+<body>
+    <canvas></canvas>
+    <script>
+        window.onload = runTests
+    </script>
+</body>
+</html>
