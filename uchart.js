@@ -90,6 +90,7 @@ class ChartPanelX {
     /** Constructs chart control
      * @param {HTMLCanvasElement} canvas @param {Object} options
      * @param {undefined|{ left: number, bottom: number, right: number, top: number }} options.offsets - by default: { left: 20, bottom: 20, right: 10, top: 10 }
+     * @param {undefined|{ left: number, top: number }} options.legend - by default: { left: offsets.left + 10, top: offsets.top + 5 }
      * @param {undefined|number} options.tickCountX - by default: 5
      * @param {undefined|number} options.tickCountY - by default: 5
      * @param {undefined|number} options.tickStepX  - by default: undefined = auto-select
@@ -102,12 +103,16 @@ class ChartPanelX {
      * @param {undefined|boolean} options.crosshair - by default: false
      * @param {undefined|ChartX[]} options.charts */
     constructor(canvas, options = {}) {
+        if (TextMetrics.prototype.height === undefined)
+            Object.defineProperty(TextMetrics.prototype, "fontHeight", { get: function() {
+                return this.fontBoundingBoxAscent + this.fontBoundingBoxDescent } })
         this.charts = options.charts ?? []
         this.canvas = canvas
         this.canvas.width = this.canvas.clientWidth
         this.canvas.height = this.canvas.clientHeight
         this.canvas.style.backgroundColor = options.backgroundColor
         this.offsets = options.offsets ?? { left: 20, bottom: 20, right: 10, top: 10 }
+        this.legend = options.legend ?? { left: this.offsets.left + 10, top: this.offsets.top + 5 }
         this.TickCountX = options.tickCountX ?? 5
         this.TickCountY = options.tickCountY ?? 5
         this.TickStepX = options.tickStepX
@@ -123,7 +128,7 @@ class ChartPanelX {
     /** @param {boolean} enable */
     enableCrossHair(enable) {
         this.canvas.onmousemove = enable ? this.draw.bind(this) : undefined
-        this.draw()
+        // this.draw()
     }
 
     /** @param {number} width @param {number} steps @return {number} */
@@ -188,7 +193,8 @@ class ChartPanelX {
         }
         ctx.stroke()
 
-        for(const chart of this.charts) {
+        for(let cn = 0; cn < this.charts.length; ++cn) {
+            const chart = this.charts[cn]
             ctx.lineWidth = chart.bold ?? this.ChartBold
             ctx.fillStyle = ctx.strokeStyle = chart.color ?? this.ChartColor
             ctx.beginPath()
@@ -201,9 +207,9 @@ class ChartPanelX {
                 }
                 else {
                     if (chart.title?.length) {
-                        const metric = ctx.measureText(chart.title) 
-                        ctx.fillText(chart.title, sx,
-                            sy + metric.fontBoundingBoxAscent + metric.fontBoundingBoxDescent)
+                        const metric = ctx.measureText(chart.title)
+                        ctx.fillText(chart.title, this.legend.left + 0.5,
+                            this.legend.top + metric.fontHeight * (cn + 1) + 0.5)
                     }
                     ctx.moveTo(sx, sy)
                 }
@@ -215,23 +221,28 @@ class ChartPanelX {
             const x = crosshair.offsetX, y = crosshair.offsetY
             if (x >= chartleft && chartright >= x && y >= charttop && chartbottom >= y) {
                 ctx.lineWidth = this.ChartBold
-                ctx.fillStyle = ctx.strokeStyle = this.ChartColor
+                ctx.fillStyle = ctx.strokeStyle = this.GridColor
                 ctx.beginPath()
                 ctx.moveTo(chartleft, y + 0.5)
                 ctx.lineTo(chartright, y + 0.5)
                 ctx.moveTo(x + 0.5, charttop)
                 ctx.lineTo(x + 0.5, chartbottom)
+                ctx.stroke()
 
-                const cx = (chartright + chartleft) / 2
-                const cy = (chartbottom + charttop) / 2
-                const mx = x < cx ? x + 30 : x - 30
-                const my = y < cy ? y + 30 : y - 30
                 const xv = (x - chartleft) / scalex + bounds.x1
                 const yv = (chartbottom - y) / scaley + bounds.y1
                 const marker = `${xv.toFixed(2)}, ${yv.toFixed(2)}`
                 const metric = ctx.measureText(marker)
-                ctx.fillText(marker, mx - metric.width / 2, my
-                    + (metric.fontBoundingBoxAscent + metric.fontBoundingBoxDescent) / 2)
+                const mx = x < (chartright + chartleft) / 2 ? x + 30 : x - 30
+                const my = y > (chartbottom + charttop) / 2
+                    ? charttop + metric.fontBoundingBoxAscent
+                    : chartbottom - metric.fontBoundingBoxDescent
+
+                ctx.fillRect(mx - metric.width / 2 - 1, my + metric.fontBoundingBoxDescent,
+                    metric.width + 2, -(metric.fontBoundingBoxAscent + metric.fontBoundingBoxDescent))
+                ctx.fillStyle = ctx.strokeStyle = getComputedStyle(this.canvas).backgroundColor                
+                ctx.beginPath()
+                ctx.fillText(marker, mx - metric.width / 2, my)
                 ctx.stroke()
             }
         }
@@ -242,7 +253,7 @@ function runTests() {
     const r = new ChartX({ title: "Sin(x)", color: "#ff0000", bold: 0.75,
         data: ChartX.makeData(181, i => i * 2, x => Math.sin(x * Math.PI / 180) + 0)})
 
-    const r1 = new ChartX({ title: "Lin", color: "#ffff00", bold: 0.5,
+    const r1 = new ChartX({ title: "Line", color: "#ffff00", bold: 0.5,
         data: [45, -1, 360-45, 1]})
 
     window.c = new ChartPanelX(document.querySelector("canvas"),
