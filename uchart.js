@@ -87,6 +87,8 @@ class ChartX {
 }
 
 class ChartPanelX {
+    // /** @type {undefined|{x:number, y:number}} */ crosshair = undefined
+
     /** Constructs chart control
      * @param {HTMLCanvasElement} canvas @param {Object} options
      * @param {undefined|{ left: number, bottom: number, right: number, top: number }} options.offsets - by default: { left: 20, bottom: 20, right: 10, top: 10 }
@@ -108,11 +110,13 @@ class ChartPanelX {
                 return this.fontBoundingBoxAscent + this.fontBoundingBoxDescent } })
         this.charts = options.charts ?? []
         this.canvas = canvas
+        this.canvas.onmousemove = this.#onmousemove.bind(this)
         this.canvas.width = this.canvas.clientWidth
         this.canvas.height = this.canvas.clientHeight
         this.canvas.style.backgroundColor = options.backgroundColor
         this.offsets = options.offsets ?? { left: 20, bottom: 20, right: 10, top: 10 }
         this.legend = options.legend ?? { left: this.offsets.left + 10, top: this.offsets.top + 5 }
+        this.crosshair = { x: 0, y: 0, enabled: options.crosshair ?? false}
         this.TickCountX = options.tickCountX ?? 5
         this.TickCountY = options.tickCountY ?? 5
         this.TickStepX = options.tickStepX
@@ -121,14 +125,17 @@ class ChartPanelX {
         this.GridColor = "ButtonBorder"
         this.ChartBold = 0.66
         this.ChartColor = "AccentColor"
-        this.enableCrossHair(options.crosshair ?? false)
         this.draw()
     }
 
-    /** @param {boolean} enable */
-    enableCrossHair(enable) {
-        this.canvas.onmousemove = enable ? this.draw.bind(this) : undefined
-        // this.draw()
+    /** @param {MouseEvent} evt */
+    #onmousemove(evt) {
+        evt.preventDefault()
+        if (this.crosshair?.enabled) {
+            this.crosshair.x = evt.offsetX
+            this.crosshair.y = evt.offsetY
+            this.draw()
+        }
     }
 
     /** @param {number} width @param {number} steps @return {number} */
@@ -217,8 +224,8 @@ class ChartPanelX {
             ctx.stroke()
         }
 
-        if (crosshair) {
-            const x = crosshair.offsetX, y = crosshair.offsetY
+        if (this.crosshair?.enabled) {
+            const x = this.crosshair.x, y = this.crosshair.y
             if (x >= chartleft && chartright >= x && y >= charttop && chartbottom >= y) {
                 ctx.lineWidth = this.ChartBold
                 ctx.fillStyle = ctx.strokeStyle = this.GridColor
@@ -228,16 +235,16 @@ class ChartPanelX {
                 ctx.moveTo(x + 0.5, charttop)
                 ctx.lineTo(x + 0.5, chartbottom)
                 ctx.stroke()
-
+    
                 const xv = (x - chartleft) / scalex + bounds.x1
                 const yv = (chartbottom - y) / scaley + bounds.y1
-                const marker = `${xv.toFixed(2)}, ${yv.toFixed(2)}`
+                const marker = `${xv.toFixed(2)} / ${yv.toFixed(2)}`
                 const metric = ctx.measureText(marker)
                 const mx = x < (chartright + chartleft) / 2 ? x + 30 : x - 30
                 const my = y > (chartbottom + charttop) / 2
                     ? charttop + metric.fontBoundingBoxAscent
                     : chartbottom - metric.fontBoundingBoxDescent
-
+    
                 ctx.fillRect(mx - metric.width / 2 - 1, my + metric.fontBoundingBoxDescent,
                     metric.width + 2, -(metric.fontBoundingBoxAscent + metric.fontBoundingBoxDescent))
                 ctx.fillStyle = ctx.strokeStyle = getComputedStyle(this.canvas).backgroundColor                
