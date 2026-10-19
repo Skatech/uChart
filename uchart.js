@@ -87,8 +87,6 @@ class ChartX {
 }
 
 class ChartPanelX {
-    // /** @type {undefined|{x:number, y:number}} */ crosshair = undefined
-
     /** Constructs chart control
      * @param {HTMLCanvasElement} canvas @param {Object} options
      * @param {undefined|{ left: number, bottom: number, right: number, top: number }} options.offsets - by default: { left: 20, bottom: 20, right: 10, top: 10 }
@@ -110,6 +108,7 @@ class ChartPanelX {
                 return this.fontBoundingBoxAscent + this.fontBoundingBoxDescent } })
         this.charts = options.charts ?? []
         this.canvas = canvas
+        this.aframe = undefined
         this.canvas.onmousemove = this.#onmousemove.bind(this)
         this.canvas.width = this.canvas.clientWidth
         this.canvas.height = this.canvas.clientHeight
@@ -124,8 +123,8 @@ class ChartPanelX {
         this.GridBold = 0.33
         this.GridColor = "ButtonBorder"
         this.ChartBold = 0.66
-        this.ChartColor = "AccentColor"
-        this.draw()
+        this.ChartColor = "AccentColor"        
+        this.invalidate()
     }
 
     /** @param {MouseEvent} evt */
@@ -134,7 +133,7 @@ class ChartPanelX {
         if (this.crosshair?.enabled) {
             this.crosshair.x = evt.offsetX
             this.crosshair.y = evt.offsetY
-            this.draw()
+            this.invalidate()
         }
     }
 
@@ -159,8 +158,13 @@ class ChartPanelX {
         }
     }
 
-    /** @param {undefined|{offsetX:number, offsetY:number}} crosshair */
-    draw(crosshair) {
+    invalidate() {
+        this.aframe ??= requestAnimationFrame(this.draw.bind(this))
+    }
+
+    /** @param {DOMHighResTimeStamp} timestamp */
+    draw(timestamp) {
+        this.aframe = undefined
         const ctx = this.canvas.getContext("2d")
         ctx.lineJoin = "round"
         ctx.imageSmoothingEnabled = false;
